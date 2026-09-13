@@ -1,9 +1,9 @@
-from flask import Flask
+from flask import Flask, render_template
 
 app = Flask(__name__)
 
 @app.route("/")
 def home():
-    return "Home page!"
+    return render_template("home.html")
 
 app.run("0.0.0.0", 5000, True)
