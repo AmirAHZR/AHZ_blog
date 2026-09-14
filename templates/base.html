@@ -7,8 +7,9 @@
 </head>
 <body>
     <nav>
-        <a href="{{ url_fkor('home') }}">🏠 خانه</a>
-        <a href="{{ url_for('add_post') }}">✍️ پست جدید</a>
+        <a href="{{ url_for('home') }}">🏠Home</a>
+        <a href="{{ url_for('add_post') }}">✍️New post</a>
+        {% block content %}{% endblock %}
     </nav>
 </body>
 </html>

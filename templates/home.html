@@ -1,12 +1,23 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-</head>
-<body>
-    <h1>Hello to AHZ blog</h1>
-    <p>This page is created by <a href="https://github.com/AmirAHZR">AmirAHZ</a></p>
-</body>
-</html>
+{% extends 'base.html' %}
+
+
+{% block content %}
+    <h1>Posts</h1>
+
+    {% if posts %}
+        {% for post in posts %}
+            <article>
+                <h2>
+                    <a href="{{ url_for('post_detail', post_id=post['id']) }}">
+                        {{ post['title'] }}
+                    </a>
+                </h2>
+                <small>{{ post['created_at'] }}</small>
+                <p>{{ post['content'][:200] }}...</p>
+            </article>
+            <hr>
+        {% endfor %}
+    {% else %}
+        <p>There no post! <a href="{{ url_for('add_post') }}">Create first post</a></p>
+    {% endif %}
+{% endblock %}
