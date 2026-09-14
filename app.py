@@ -74,33 +74,39 @@ def delete_post(post_id):
     flash('🗑️ پست با موفقیت حذف شد!', 'success')
     return redirect(url_for('home'))
 
-@app.route('/edit/<int:post>', methods=["GET", "POST"])
+@app.route('/edit/<int:post_id>', methods=['GET', 'POST'])
 def edit_post(post_id):
     conn = get_db()
-    post = conn.execute('SELECT * FROM posts WHERE id = ?',post_id).fetchone()
 
-    if not(post):
-        return render_template("404.html")
+    post = conn.execute(
+        'SELECT * FROM posts WHERE id = ?',
+        (post_id,)
+    ).fetchone()
 
-    if request.method == "POST":
-        title = request.form['title'].strip()
-        content = request.form['content'].strip()
+    if post is None:
+        conn.close()
+        return render_template('404.html'), 404
 
-        if not(title) or not(content):
-            flash("Tittle or content can't be empty", "error")
-            conn.close()
-            return redirect(url_for("edit_post",postid=post_id))
+    if request.method == 'POST':
+        title = request.form['title']
+        content = request.form['content']
 
         conn.execute(
             'UPDATE posts SET title = ?, content = ? WHERE id = ?',
             (title, content, post_id)
         )
+
         conn.commit()
         conn.close()
 
-        return redirect(url_for("post_detail", post_id=post_id))
+        return redirect(url_for('post_detail', post_id=post_id))
 
-    render_template("edit_post.html")
+    conn.close()
+
+    return render_template(
+        'edit_post.html',
+        post=post
+    )
         
 @app.errorhandler(404)
 def page_not_found(error):
