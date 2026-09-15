@@ -4,27 +4,145 @@
 
 {% block content %}
 
-    <article class="post-detail">
-        <h1>{{ post['title'] }}</h1>
-        <small>📅 {{ post['created_at'] }}</small>
-        
-        <div class="post-content">
-            {{ post['content'] }}
-        </div>
-    </article>
-    <div class="actions">
-        <a href="{{ url_for('edit_post', post_id=post['id']) }}" class="btn btn-warning">
-            Edit
-        </a>
-    <div class="actions">
-        <form method="POST" 
-              action="{{ url_for('delete_post', post_id=post['id']) }}" 
-              onsubmit="return confirm('Are you sure?')" 
-              style="display:inline;">
-            <button type="submit" class="btn btn-danger">Delete</button>
-        </form>
+<article class="post-detail">
+
+    <h1>{{ post['title'] }}</h1>
+
+    <small>
+        👤 Author: {{ post['author'] }}
+    </small>
+
+    <br>
+
+    <small>
+        📅 {{ post['created_at'] }}
+    </small>
+
+    <div class="post-content">
+        {{ post['content'] }}
     </div>
 
+</article>
 
+
+<div class="likes">
+
+    <span>
+        ❤️ {{ like_count }} Likes
+    </span>
+
+    {% if session.get('user_id') %}
+
+        <form method="POST"
+              action="{{ url_for('like_post', post_id=post['id']) }}"
+              style="display:inline;">
+
+            <button type="submit">
+                {% if user_liked %}
+                    Unlike
+                {% else %}
+                    Like
+                {% endif %}
+            </button>
+
+        </form>
+
+    {% else %}
+
+        <span>
+            <a href="{{ url_for('login') }}">Login</a> to like
+        </span>
+
+    {% endif %}
+
+</div>
+
+
+{% if session.get('user_id') == post['author_id'] %}
+
+<div class="actions">
+
+    <a href="{{ url_for('edit_post', post_id=post['id']) }}"
+       class="btn btn-warning">
+        Edit
+    </a>
+
+    <form method="POST"
+          action="{{ url_for('delete_post', post_id=post['id']) }}"
+          onsubmit="return confirm('Are you sure?')"
+          style="display:inline;">
+
+        <button type="submit" class="btn btn-danger">
+            Delete
+        </button>
+
+    </form>
+
+</div>
+
+{% endif %}
+
+
+<h2>Comments</h2>
+
+{% if session.get('user_id') %}
+
+<form method="POST"
+      action="{{ url_for('add_comment', post_id=post['id']) }}">
+
+    <textarea
+        name="content"
+        rows="4"
+        placeholder="Write a comment..."
+        required></textarea>
+
+    <button type="submit">
+        Comment
+    </button>
+
+</form>
+
+{% else %}
+
+<p>
+    <a href="{{ url_for('login') }}">Login</a>
+    to write a comment.
+</p>
+
+{% endif %}
+
+
+<div class="comments">
+
+    {% for comment in comments %}
+
+        <div class="comment">
+
+            <strong>
+                {{ comment['username'] }}
+            </strong>
+
+            <small>
+                📅 {{ comment['created_at'] }}
+            </small>
+
+            <p>
+                {{ comment['content'] }}
+            </p>
+
+        </div>
+
+    {% else %}
+
+        <p>No comments yet.</p>
+
+    {% endfor %}
+
+</div>
+
+
+<p style="margin-top: 30px;">
+    <a href="{{ url_for('home') }}">Back to home</a>
+</p>
 
 {% endblock %}

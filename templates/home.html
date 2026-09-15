@@ -18,6 +18,6 @@
             <hr>
         {% endfor %}
     {% else %}
-        <p>There no post! <a href="{{ url_for('add_post') }}">Create first post</a></p>
+        <p>There is no post<a href="{{ url_for('add_post') }}">Create first post</a></p>
     {% endif %}
 {% endblock %}
