@@ -66,5 +66,17 @@ def init_db():
     UNIQUE (follower_id, following_id)
     )''')
 
+
+    cursor.execute('''CREATE TABLE IF NOT EXISTS post_views (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+    user_id INTEGER NOT NULL,
+    post_id INTEGER NOT NULL,
+
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (post_id) REFERENCES posts(id),
+
+    UNIQUE (user_id, post_id)
+)''')
     conn.commit()
     conn.close()

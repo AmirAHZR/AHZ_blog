@@ -9,16 +9,74 @@ app.secret_key = 'ahz-blog-secret-key'
 
 DATABASE = 'blog.db'
 
-
-
-
-
-@app.route('/')
+@app.route("/")
 def home():
+
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+
+    user_id = session["user_id"]
+
     conn = get_db()
-    posts = conn.execute('SELECT * FROM posts ORDER BY id DESC').fetchall()
+
+    posts = conn.execute(
+        """
+        SELECT
+            posts.*,
+
+            CASE
+
+                -- پست‌های خود کاربر → همیشه آخر
+                WHEN posts.author_id = ?
+                THEN 4
+
+                -- دنبال‌شونده + دیده‌نشده
+                WHEN followers.id IS NOT NULL
+                     AND post_views.id IS NULL
+                THEN 0
+
+                -- بقیه + دیده‌نشده
+                WHEN followers.id IS NULL
+                     AND post_views.id IS NULL
+                THEN 1
+
+                -- دنبال‌شونده + دیده‌شده
+                WHEN followers.id IS NOT NULL
+                     AND post_views.id IS NOT NULL
+                THEN 2
+
+                -- بقیه + دیده‌شده
+                ELSE 3
+
+            END AS priority
+
+        FROM posts
+
+        LEFT JOIN followers
+            ON followers.following_id = posts.author_id
+            AND followers.follower_id = ?
+
+        LEFT JOIN post_views
+            ON post_views.post_id = posts.id
+            AND post_views.user_id = ?
+
+        ORDER BY priority ASC, posts.id DESC
+        """,
+
+        (
+            user_id,  # posts.author_id = ?
+            user_id,  # followers.follower_id = ?
+            user_id   # post_views.user_id = ?
+        )
+
+    ).fetchall()
+
     conn.close()
-    return render_template('home.html', posts=posts)
+
+    return render_template(
+        "home.html",
+        posts=posts
+    )
 
 
 @app.route('/post/<int:post_id>')
@@ -57,6 +115,15 @@ def post_detail(post_id):
         ORDER BY comments.created_at DESC
     ''', (post_id,)).fetchall()
 
+    conn.execute(
+    """
+    INSERT OR IGNORE INTO post_views (user_id, post_id)
+    VALUES (?, ?)
+    """,
+    (session["user_id"], post_id)
+    )
+
+    conn.commit()
     conn.close()
 
     return render_template(
