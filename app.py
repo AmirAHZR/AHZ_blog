@@ -313,12 +313,106 @@ def profile(username):
         "SELECT * FROM posts WHERE author_id = ? ORDER BY id DESC",
         (user["id"],)
     ).fetchall()
+    
+    is_following = conn.execute(
+    """
+    SELECT id FROM followers
+    WHERE follower_id = ? AND following_id = ?
+    """,
+    (session.get("user_id"), user["id"])
+    ).fetchone()
+    followers_count = conn.execute(
+    "SELECT COUNT(*) FROM followers WHERE following_id = ?",
+    (user["id"],)
+    ).fetchone()[0]
     conn.close()
-    return render_template("profile.html", user=user, posts=posts)
+    return render_template("profile.html", user=user, posts=posts, is_following=is_following, followers_count=followers_count)
+
+@app.route("/follow/<username>", methods=["POST"])
+def follow(username):
+    if 'user_id' not in session:
+        return redirect(url_for("login"))
+
+    conn = get_db()
+
+   
+    user = conn.execute(
+        "SELECT id FROM users WHERE username = ?",
+        (username,)
+    ).fetchone()
+
+    if user is None:
+        conn.close()
+        return render_template("404_profile.html")
 
 
+    existing = conn.execute(
+        """
+        SELECT id FROM followers
+        WHERE follower_id = ? AND following_id = ?
+        """,
+        (session["user_id"], user["id"])
+    ).fetchone()
+
+    if existing is None:
+        conn.execute(
+            """
+            INSERT INTO followers (follower_id, following_id)
+            VALUES (?, ?)
+            """,
+            (session["user_id"], user["id"])
+        )
+        conn.commit()
+
+    conn.close()
+
+    return redirect(url_for("profile", username=username))
+
+@app.route("/unfollow/<username>", methods=["POST"])
+def unfollow(username):
+    if 'user_id' not in session:
+        return redirect(url_for("login"))
+
+    conn = get_db()
+
+    user = conn.execute(
+        "SELECT id FROM users WHERE username = ?",
+        (username,)
+    ).fetchone()
+
+    if user is None:
+        conn.close()
+        return render_template("404_profile.html")
 
 
+    existing = conn.execute(
+        """
+        SELECT id FROM followers
+        WHERE follower_id = ? AND following_id = ?
+        """,
+        (session["user_id"], user["id"])
+    ).fetchone()
+
+    if existing is None:
+
+        conn.close()
+        return redirect(url_for("show_profile", username=username))
+
+
+    conn.execute(
+        """
+        DELETE FROM followers
+        WHERE follower_id = ? AND following_id = ?
+        """,
+        (session["user_id"], user["id"])
+    )
+
+    conn.commit()
+    conn.close()
+
+    return redirect(url_for("profile", username=username))
+    
+#Running app part
 if __name__ == '__main__':
     init_db()
     app.run(host='0.0.0.0', port=5000, debug=True)

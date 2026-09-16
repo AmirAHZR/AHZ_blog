@@ -5,6 +5,16 @@
 {% block content %}
 
     <h1>{{user["username"]}} Profile</h1>
+    <p>Followers: {{ followers_count }}</p>
+    {% if is_following %}
+    <form action="{{ url_for('unfollow', username=user['username']) }}" method="POST">
+    <button type="submit">Unfollow</button>
+    </form>
+    {% else %}
+    <form action="{{ url_for('follow', username=user['username']) }}" method="POST">
+    <button type="submit">Follow</button>
+    </form>
+    {% endif %}
     <p>Posts: {{ posts|length }}</p>
     {% for post in posts %}
     <article>
