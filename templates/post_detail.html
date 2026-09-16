@@ -7,10 +7,11 @@
 <article class="post-detail">
 
     <h1>{{ post['title'] }}</h1>
-
-    <small>
-        👤 Author: {{ post['author'] }}
-    </small>
+    <p> {{ post["content"]}} </p>
+    <small>👤 Author: </small>
+    <a href="{{ url_for('profile', username=post['author']) }}"><small>
+        {{ post['author'] }}
+    </small></a>
 
     <br>
 
@@ -18,9 +19,7 @@
         📅 {{ post['created_at'] }}
     </small>
 
-    <div class="post-content">
-        {{ post['content'] }}
-    </div>
+    
 
 </article>
 
@@ -118,9 +117,10 @@
 
         <div class="comment">
 
-            <strong>
+            <a href="{{ url_for('profile', username=comment['username']) }}">
+                <strong>
                 {{ comment['username'] }}
-            </strong>
+            </strong></a>
 
             <small>
                 📅 {{ comment['created_at'] }}

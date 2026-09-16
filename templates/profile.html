@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+
+{% block title %}{{user["username"]}}{% endblock %}
+
+{% block content %}
+
+    <h1>{{user["username"]}} Profile</h1>
+    <p>Posts: {{ posts|length }}</p>
+    {% for post in posts %}
+    <article>
+       <a href="{{ url_for('post_detail', post_id=post['id']) }}">
+    <h2>{{ post["title"] }}</h2>
+    </a>
+        <p>{{post["content"][0:51]}}</p>
+    </article>
+    {% endfor %}
+{% endblock %}

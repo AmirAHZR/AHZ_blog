@@ -296,6 +296,28 @@ def add_comment(post_id):
 
     return redirect(url_for('post_detail', post_id=post_id))
 
+@app.route("/profile/<username>")
+def profile(username):
+    conn = get_db()
+
+    user = conn.execute(
+        "SELECT * FROM users WHERE username = ?",
+        (username,)
+    ).fetchone()
+    
+    print(user)
+    if user == None:
+        return render_template("404_profile.html", user=user)
+
+    posts = conn.execute(
+        "SELECT * FROM posts WHERE author_id = ? ORDER BY id DESC",
+        (user["id"],)
+    ).fetchall()
+    conn.close()
+    return render_template("profile.html", user=user, posts=posts)
+
+
+
 
 if __name__ == '__main__':
     init_db()

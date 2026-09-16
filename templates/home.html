@@ -13,7 +13,7 @@
                     </a>
                 </h2>
                 <small>{{ post['created_at'] }}</small>
-                <p>{{ post['content'][:200] }}...</p>
+                <p>{{ post['content'][:20] }}{% if post['content']|length > 20 %}...{% endif %}</p>
             </article>
             <hr>
         {% endfor %}
