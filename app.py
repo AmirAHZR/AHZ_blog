@@ -325,8 +325,38 @@ def profile(username):
     "SELECT COUNT(*) FROM followers WHERE following_id = ?",
     (user["id"],)
     ).fetchone()[0]
+    following_count = conn.execute(
+    "SELECT COUNT(*) FROM followers WHERE follower_id = ?",
+    (user["id"],)
+    ).fetchone()[0]
+    following = conn.execute(
+    """
+    SELECT users.*
+    FROM followers
+    JOIN users ON followers.following_id = users.id
+    WHERE followers.follower_id = ?
+    """,
+    (user["id"],)
+    ).fetchall()
+    followers = conn.execute(
+    """
+    SELECT users.*
+    FROM followers
+    JOIN users ON followers.follower_id = users.id
+    WHERE followers.following_id = ?
+    """,
+    (user["id"],)
+    ).fetchall()
     conn.close()
-    return render_template("profile.html", user=user, posts=posts, is_following=is_following, followers_count=followers_count)
+    return render_template("profile.html", user=user,
+                            posts=posts,
+                            is_following=is_following,
+                            following_count=following_count,
+                            followers_count=followers_count,
+                            following=following,
+                            followers=followers,
+                            )
+
 
 @app.route("/follow/<username>", methods=["POST"])
 def follow(username):
