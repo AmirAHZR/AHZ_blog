@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>Notifications</h1>
+
+{% if notifications %}
+
+    {% for notification in notifications %}
+
+        <div class="notification">
+
+            {% if notification["type"] == "follow" %}
+
+                <p>
+                    <a href="{{url_for('profile', username=notification['username'])}}"><strong>{{ notification["username"] }}</strong></a>
+                    started following you.
+                </p>
+
+            {% elif notification["type"] == "like" %}
+
+                <p>
+                    <a href="{{url_for('profile', username=notification['username'])}}"><strong>{{ notification["username"] }}</strong></a>
+                    liked your post
+                    <a href="{{url_for('post_detail', post_id=notification['post_id'])}}"><strong>{{ notification["title"] }}</strong>.</a>
+                </p>
+
+            {% elif notification["type"] == "comment" %}
+
+                <p>
+                    <a href="{{url_for('profile', username=notification['username'])}}"><strong>{{ notification["username"] }}</strong></a>
+                    commented on your post
+                    <a href="{{url_for('post_detail', post_id=notification['post_id'])}}"><strong>{{ notification["title"] }}</strong>.</a>
+                </p>
+              
+
+            {% endif %}
+
+            <small>
+                {{ notification["created_at"] }}
+            </small>
+
+        </div>
+
+        <hr>
+
+    {% endfor %}
+
+{% else %}
+
+    <p>No notifications yet.</p>
+
+{% endif %}
+
+{% endblock %}

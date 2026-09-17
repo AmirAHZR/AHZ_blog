@@ -77,6 +77,19 @@ def init_db():
     FOREIGN KEY (post_id) REFERENCES posts(id),
 
     UNIQUE (user_id, post_id)
-)''')
+    )''')
+    cursor.execute('''CREATE TABLE IF NOT EXISTS notifications (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    actor_id INTEGER NOT NULL,
+    type TEXT NOT NULL,
+    post_id INTEGER,
+    is_read INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (actor_id) REFERENCES users(id),
+    FOREIGN KEY (post_id) REFERENCES posts(id)
+    )''')
     conn.commit()
     conn.close()
