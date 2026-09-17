@@ -6,18 +6,45 @@
 
     {% if posts %}
         {% for post in posts %}
+
             <article>
+
                 <h2>
                     <a href="{{ url_for('post_detail', post_id=post['id']) }}">
                         {{ post['title'] }}
                     </a>
                 </h2>
+
+                <p>
+                    Author:
+                    <a href="{{ url_for('profile', username=post['author']) }}">
+                        @{{ post['author'] }}
+                    </a>
+                </p>
+
                 <small>{{ post['created_at'] }}</small>
-                <p>{{ post['content'][:20] }}{% if post['content']|length > 20 %}...{% endif %}</p>
+
+                <p>
+                    {{ post['content'][:20] }}
+                    {% if post['content']|length > 20 %}
+                        ...
+                    {% endif %}
+                </p>
+
             </article>
+
             <hr>
+
         {% endfor %}
+
     {% else %}
-        <p>There is no post<a href="{{ url_for('add_post') }}">Create first post</a></p>
+
+        <p>
+            There is no post
+            <a href="{{ url_for('add_post') }}">
+                Create first post
+            </a>
+        </p>
+
     {% endif %}
 {% endblock %}

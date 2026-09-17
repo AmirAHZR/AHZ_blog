@@ -3,9 +3,13 @@ from sqlite3 import IntegrityError
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from werkzeug.security import generate_password_hash, check_password_hash
 from database import init_db
+import os
 
 app = Flask(__name__)
-app.secret_key = 'ahz-blog-secret-key'
+app.secret_key = os.environ.get(
+    "SECRET_KEY",
+    "dev-secret-key"
+)
 
 DATABASE = 'blog.db'
 
@@ -44,6 +48,7 @@ def home():
             """
             SELECT
                 posts.*,
+                users.username AS author,
 
                 CASE
                     WHEN posts.author_id = ?
@@ -66,6 +71,9 @@ def home():
 
             FROM posts
 
+            LEFT JOIN users
+                ON posts.author_id = users.id
+
             LEFT JOIN followers
                 ON followers.following_id = posts.author_id
                 AND followers.follower_id = ?
@@ -81,12 +89,17 @@ def home():
 
     else:
 
-        
         posts = conn.execute(
             """
-            SELECT *
+            SELECT
+                posts.*,
+                users.username AS author
             FROM posts
-            ORDER BY id DESC
+
+            LEFT JOIN users
+                ON posts.author_id = users.id
+
+            ORDER BY posts.id DESC
             """
         ).fetchall()
 
@@ -96,7 +109,6 @@ def home():
         "home.html",
         posts=posts
     )
-
 
 @app.route('/post/<int:post_id>')
 def post_detail(post_id):
@@ -436,8 +448,8 @@ def profile(username):
         (username,)
     ).fetchone()
     
-    print(user)
     if user == None:
+        conn.close
         return render_template("404_profile.html", user=user)
 
     posts = conn.execute(
@@ -489,41 +501,50 @@ def profile(username):
                             )
 
 
-@app.route("/follow/<username>", methods=["POST"])
+@app.route("/follow/<username>")
 def follow(username):
-    if 'user_id' not in session:
+
+    if "user_id" not in session:
         return redirect(url_for("login"))
 
     conn = get_db()
 
-   
     user = conn.execute(
-        "SELECT id FROM users WHERE username = ?",
+        "SELECT * FROM users WHERE username = ?",
         (username,)
     ).fetchone()
 
     if user is None:
         conn.close()
-        return render_template("404_profile.html")
+        return render_template("404_profile.html"), 404
 
+    # جلوگیری از Follow کردن خود
+    if user["id"] == session["user_id"]:
+        conn.close()
+        return redirect(url_for("profile", username=username))
 
     existing = conn.execute(
         """
-        SELECT id FROM followers
-        WHERE follower_id = ? AND following_id = ?
+        SELECT id
+        FROM followers
+        WHERE follower_id = ?
+        AND following_id = ?
         """,
         (session["user_id"], user["id"])
     ).fetchone()
+
     if existing is None:
 
         conn.execute(
             """
-            INSERT INTO followers (follower_id, following_id)
+            INSERT INTO followers
+            (follower_id, following_id)
             VALUES (?, ?)
             """,
             (session["user_id"], user["id"])
         )
 
+        # Notification
         conn.execute(
             """
             INSERT INTO notifications
@@ -537,20 +558,13 @@ def follow(username):
             )
         )
 
-    conn.commit()
-    if existing is None:
-        conn.execute(
-            """
-            INSERT INTO followers (follower_id, following_id)
-            VALUES (?, ?)
-            """,
-            (session["user_id"], user["id"])
-        )
         conn.commit()
 
     conn.close()
 
-    return redirect(url_for("profile", username=username))
+    return redirect(
+        url_for("profile", username=username)
+    )
 
 @app.route("/unfollow/<username>", methods=["POST"])
 def unfollow(username):
