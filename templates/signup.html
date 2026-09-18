@@ -3,9 +3,15 @@
 {% block content %}
 
 <h1>Sign Up</h1>
-
+ {% if errors %}
+    <div class="errors">
+        {% for error in errors %}
+            <p>{{ error }}</p>
+        {% endfor %}
+    </div>
+    {% endif %}
 <form method="POST">
-
+   
     <input
         type="text"
         name="username"
@@ -24,9 +30,7 @@
 
 </form>
 
-{% if error %}
-    <p>{{ error }}</p>
-{% endif %}
+
 
 <p>
     Already have an account?

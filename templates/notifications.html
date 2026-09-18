@@ -22,7 +22,7 @@
                 <p>
                     <a href="{{url_for('profile', username=notification['username'])}}"><strong>{{ notification["username"] }}</strong></a>
                     liked your post
-                    <a href="{{url_for('post_detail', post_id=notification['post_id'])}}"><strong>{{ notification["title"] }}</strong>.</a>
+                    <a href="{{url_for('post_detail', post_id=notification['post_id'])}}"><strong>{{ notification["title"] }}</strong></a>.
                 </p>
 
             {% elif notification["type"] == "comment" %}
@@ -30,7 +30,7 @@
                 <p>
                     <a href="{{url_for('profile', username=notification['username'])}}"><strong>{{ notification["username"] }}</strong></a>
                     commented on your post
-                    <a href="{{url_for('post_detail', post_id=notification['post_id'])}}"><strong>{{ notification["title"] }}</strong>.</a>
+                    <a href="{{url_for('post_detail', post_id=notification['post_id'])}}"><strong>{{ notification["title"] }}</strong></a>.
                 </p>
               
 

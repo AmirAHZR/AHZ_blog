@@ -4,6 +4,8 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 from werkzeug.security import generate_password_hash, check_password_hash
 from database import init_db
 import os
+import re
+
 
 app = Flask(__name__)
 app.secret_key = os.environ.get(
@@ -12,6 +14,39 @@ app.secret_key = os.environ.get(
 )
 
 DATABASE = 'blog.db'
+
+def validate_signup(username, password):
+    errors = []
+
+    
+    if not username:
+        errors.append("Username cannot be empty.")
+
+    elif len(username) < 3:
+        errors.append("Username must be at least 3 characters.")
+
+    elif len(username) > 30:
+        errors.append("Username must be less than 30 characters.")
+
+    elif not re.fullmatch(r"[A-Za-z0-9_]+", username):
+        errors.append(
+            "Username can only contain letters, numbers and underscores."
+        )
+
+    
+    if not password:
+        errors.append("Password cannot be empty.")
+
+    elif len(password) < 8:
+        errors.append("Password must be at least 8 characters.")
+
+    elif not re.search(r"[A-Za-z]", password):
+        errors.append("Password must contain at least one letter.")
+
+    elif not re.search(r"\d", password):
+        errors.append("Password must contain at least one number.")
+
+    return errors
 
 @app.context_processor
 def inject_notifications():
@@ -281,8 +316,18 @@ def signup():
         return redirect(url_for('home'))
 
     if request.method == 'POST':
-        username = request.form['username']
+
+        username = request.form['username'].strip()
         password = request.form['password']
+
+        errors = validate_signup(username, password)
+
+        if errors:
+            return render_template(
+                'signup.html',
+                errors=errors,
+                username=username
+            )
 
         password_hash = generate_password_hash(password)
 
@@ -301,9 +346,11 @@ def signup():
 
         except IntegrityError:
             conn.close()
+
             return render_template(
                 'signup.html',
-                error='Username already exists'
+                errors=['Username already exists.'],
+                username=username
             )
 
     return render_template('signup.html')
