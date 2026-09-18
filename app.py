@@ -395,55 +395,79 @@ def logout():
 
 @app.route('/like/<int:post_id>', methods=['POST'])
 def like_post(post_id):
+
     if 'user_id' not in session:
         return redirect(url_for('login'))
 
     conn = get_db()
 
+  
+    post = conn.execute(
+        'SELECT author_id FROM posts WHERE id = ?',
+        (post_id,)
+    ).fetchone()
+
+    if post is None:
+        conn.close()
+        return render_template('404.html'), 404
+
     existing_like = conn.execute(
-        'SELECT * FROM likes WHERE user_id = ? AND post_id = ?',
+        '''
+        SELECT *
+        FROM likes
+        WHERE user_id = ? AND post_id = ?
+        ''',
         (session['user_id'], post_id)
     ).fetchone()
 
     if existing_like:
+
+       
         conn.execute(
-            'DELETE FROM likes WHERE user_id = ? AND post_id = ?',
+            '''
+            DELETE FROM likes
+            WHERE user_id = ? AND post_id = ?
+            ''',
             (session['user_id'], post_id)
         )
+
     else:
+
+   
         conn.execute(
-            'INSERT INTO likes (user_id, post_id) VALUES (?, ?)',
+            '''
+            INSERT INTO likes (user_id, post_id)
+            VALUES (?, ?)
+            ''',
             (session['user_id'], post_id)
         )
-    post = conn.execute(
-    "SELECT author_id FROM posts WHERE id = ?",
-    (post_id,)
-    ).fetchone()
-    if post and post["author_id"] != session["user_id"]:
-        conn.execute(
-        """
-        INSERT INTO notifications
-        (user_id, actor_id, type, post_id)
-        SELECT author_id, ?, ?, ?
-        FROM posts
-        WHERE id = ?
-        """,
-        (
-            session["user_id"],
-            "like",
-            post_id,
-            post_id
-        )
-        )
+
+    
+        if post['author_id'] != session['user_id']:
+            conn.execute(
+                '''
+                INSERT INTO notifications
+                (user_id, actor_id, type, post_id)
+                VALUES (?, ?, ?, ?)
+                ''',
+                (
+                    post['author_id'],
+                    session['user_id'],
+                    'like',
+                    post_id
+                )
+            )
 
     conn.commit()
     conn.close()
 
-    return redirect(url_for('post_detail', post_id=post_id))
-
+    return redirect(
+        url_for('post_detail', post_id=post_id)
+    )
 
 @app.route('/comment/<int:post_id>', methods=['POST'])
 def add_comment(post_id):
+
     if 'user_id' not in session:
         return redirect(url_for('login'))
 
@@ -451,40 +475,59 @@ def add_comment(post_id):
 
     if not content:
         flash('Comment cannot be empty!', 'error')
-        return redirect(url_for('post_detail', post_id=post_id))
+        return redirect(
+            url_for('post_detail', post_id=post_id)
+        )
 
     conn = get_db()
 
+    # Check if post exists
+    post = conn.execute(
+        'SELECT author_id FROM posts WHERE id = ?',
+        (post_id,)
+    ).fetchone()
+
+    if post is None:
+        conn.close()
+        return render_template('404.html'), 404
+
+    # Add comment
     conn.execute(
         '''
-        INSERT INTO comments (content, user_id, post_id)
+        INSERT INTO comments
+        (content, user_id, post_id)
         VALUES (?, ?, ?)
         ''',
-        (content, session['user_id'], post_id)
+        (
+            content,
+            session['user_id'],
+            post_id
+        )
     )
-    post = conn.execute(
-    "SELECT author_id FROM posts WHERE id = ?",
-    (post_id,)
-).fetchone()
 
-    if post and post["author_id"] != session["user_id"]:
+    # Notification
+    if post['author_id'] != session['user_id']:
         conn.execute(
-            """
+            '''
             INSERT INTO notifications
             (user_id, actor_id, type, post_id)
             VALUES (?, ?, ?, ?)
-            """,
+            ''',
             (
-                post["author_id"],
-                session["user_id"],
-                "comment",
+                post['author_id'],
+                session['user_id'],
+                'comment',
                 post_id
             )
         )
+
     conn.commit()
     conn.close()
 
-    return redirect(url_for('post_detail', post_id=post_id))
+    return redirect(
+        url_for('post_detail', post_id=post_id)
+    )
+
 
 @app.route("/profile/<username>")
 def profile(username):
@@ -495,9 +538,9 @@ def profile(username):
         (username,)
     ).fetchone()
     
-    if user == None:
-        conn.close
-        return render_template("404_profile.html", user=user)
+    if user is None:
+        conn.close()
+        return render_template("404_profile.html", user=user), 404
 
     posts = conn.execute(
         "SELECT * FROM posts WHERE author_id = ? ORDER BY id DESC",
@@ -616,7 +659,7 @@ def follow(username):
 @app.route("/unfollow/<username>", methods=["POST"])
 def unfollow(username):
     if 'user_id' not in session:
-        return redirect(url_for("login"))
+        return redirect(url_for("login")),404
 
     conn = get_db()
 
