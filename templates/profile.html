@@ -7,10 +7,12 @@
     <h1>{{user["username"]}} Profile</h1>
     {% if is_following %}
     <form action="{{ url_for('unfollow', username=user['username']) }}" method="POST">
-    <button type="submit">Unfollow</button>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit">Unfollow</button>
     </form>
     {% else %}
     <form action="{{ url_for('follow', username=user['username']) }}" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <button type="submit">Follow</button>
     </form>
     {% endif %}

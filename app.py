@@ -3,15 +3,17 @@ from sqlite3 import IntegrityError
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from werkzeug.security import generate_password_hash, check_password_hash
 from database import init_db
-import os
+from os import environ
 import re
+from flask_wtf.csrf import CSRFProtect, CSRFError
 
 
 app = Flask(__name__)
-app.secret_key = os.environ.get(
+app.secret_key = environ.get(
     "SECRET_KEY",
     "dev-secret-key"
 )
+csrf = CSRFProtect(app)
 
 DATABASE = 'blog.db'
 
@@ -69,6 +71,13 @@ def inject_notifications():
     conn.close()
 
     return {"notification_count": count}
+
+@app.errorhandler(CSRFError)
+def handle_csrf_error(e):
+    return render_template(
+        'csrf_error.html',
+        reason=e.description
+    ), 400
 
 
 @app.route("/")
@@ -591,7 +600,7 @@ def profile(username):
                             )
 
 
-@app.route("/follow/<username>")
+@app.route("/follow/<username>", methods=["POST"])
 def follow(username):
 
     if "user_id" not in session:

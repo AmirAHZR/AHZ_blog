@@ -7,6 +7,7 @@
     <b><h1>Edit post</h1></b>
 
     <form method="POST" class="post-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="form-group">
             <label for="title">Tittle</label>
             <input 
