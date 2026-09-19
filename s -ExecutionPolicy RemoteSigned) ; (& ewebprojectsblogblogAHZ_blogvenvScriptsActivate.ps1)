@@ -1,0 +1,26 @@
+[33m0679e19[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Update CSRF
+[33mb64ad3f[m Fix gitignore
+[33md039be7[m Add CSRF protocol
+[33m869cb0a[m Fix 404 error
+[33m9b1cc4e[m Update app.py
+[33mb57a3f7[m Update creating user protocol
+[33m1d90070[m Fix security bugs
+[33mb1db7d3[m Add notifications
+[33m86a9b53[m Create README.md
+[33m89aaab8[m Add feed to home
+[33m49309aa[m Add followers and following to profile
+[33m48cb9e2[m Add following
+[33m72d4cfb[m Add gitignore
+[33m7846d1e[m Add profile
+[33m1cf0b31[m Add signin & signup
+[33m30f5fd5[m Upgrade CRUD
+[33mbc178e6[m Add post and CRUD
+[33m54ad27b[m Add database
+[33m437a3b8[m Create LICENSE
+[33medcedd0[m Add home route
+[33mb4769e1[m Make template home route
+[33m24e8e78[m initial flask commit
+[33m526cecb[m Delete .gitignore
+[33m20815a8[m Delete AHZ_blog directory
+[33m67e51b3[m Initial commation
+[33md2fd8ee[m Initial commit
