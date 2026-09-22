@@ -668,7 +668,7 @@ def follow(username):
 @app.route("/unfollow/<username>", methods=["POST"])
 def unfollow(username):
     if 'user_id' not in session:
-        return redirect(url_for("login")),404
+        return redirect(url_for("login"))
 
     conn = get_db()
 
