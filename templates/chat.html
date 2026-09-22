@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {{ other_user["username"] }}
+{% endblock %}
+
+{% block content %}
+
+<h1>
+    {{ other_user["username"] }}
+</h1>
+
+<div id="chat-box">
+
+    {% for message in messages %}
+
+        <div>
+
+            <strong>
+                {{ message["sender"] }}
+            </strong>
+
+            <p>
+                {{ message["content"] }}
+            </p>
+
+            <small>
+                {{ message["created_at"] }}
+            </small>
+
+        </div>
+
+    {% endfor %}
+
+</div>
+
+<form method="POST">
+
+    <input
+        type="hidden"
+        name="csrf_token"
+        value="{{ csrf_token() }}"
+    >
+
+    <input
+        type="text"
+        name="content"
+        placeholder="Write a message..."
+        autocomplete="off"
+        required
+    >
+
+    <button type="submit">
+        Send
+    </button>
+
+</form>
+
+{% endblock %}

@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}
+    Messages
+{% endblock %}
+
+{% block content %}
+
+<h1>Messages</h1>
+
+{% if conversations %}
+
+    {% for conversation in conversations %}
+
+        <a
+            href="{{ url_for(
+                'chat',
+                username=conversation['username']
+            ) }}"
+        >
+
+            <div>
+
+                <h3>
+                    {{ conversation["username"] }}
+                </h3>
+
+                {% if conversation["last_message"] %}
+
+                    <p>
+                        {{ conversation["last_message"] }}
+                    </p>
+
+                {% else %}
+
+                    <p>
+                        No messages yet
+                    </p>
+
+                {% endif %}
+
+                <small>
+                    {{ conversation["created_at"] }}
+                </small>
+
+            </div>
+
+        </a>
+
+    {% endfor %}
+
+{% else %}
+
+    <p>
+        You don't have any conversations yet.
+    </p>
+
+{% endif %}
+
+{% endblock %}

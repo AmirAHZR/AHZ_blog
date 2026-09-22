@@ -755,6 +755,164 @@ def notifications():
         notifications=notifications
     )
 
+@app.route("/messages")
+def messages():
+
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+
+    conn = get_db()
+
+    conversations = conn.execute("""
+        SELECT
+            c.id AS conversation_id,
+            u.username,
+            m.content AS last_message,
+            m.created_at
+
+        FROM conversations AS c
+
+        JOIN conversation_members AS cm
+            ON c.id = cm.conversation_id
+
+        JOIN conversation_members AS other_cm
+            ON c.id = other_cm.conversation_id
+
+        JOIN users AS u
+            ON u.id = other_cm.user_id
+
+        LEFT JOIN messages AS m
+            ON m.id = (
+                SELECT MAX(m2.id)
+                FROM messages AS m2
+                WHERE m2.conversation_id = c.id
+            )
+
+        WHERE cm.user_id = ?
+        AND other_cm.user_id != ?
+
+        ORDER BY m.id DESC
+    """, (
+        session["user_id"],
+        session["user_id"]
+    )).fetchall()
+
+    conn.close()
+
+    return render_template(
+        "messages.html",
+        conversations=conversations
+    )
+
+
+@app.route("/messages/<username>")
+def chat(username):
+
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+
+    conn = get_db()
+
+    other_user = conn.execute("""
+        SELECT id, username
+        FROM users
+        WHERE username = ?
+    """, (username,)).fetchone()
+
+    if other_user is None:
+        conn.close()
+        return render_template("404_profile.html"), 404
+
+    if other_user["id"] == session["user_id"]:
+        conn.close()
+        return redirect(
+            url_for(
+                "profile",
+                username=username
+            )
+        )
+
+    conversation = conn.execute("""
+        SELECT c.id
+
+        FROM conversations AS c
+
+        JOIN conversation_members AS cm1
+            ON c.id = cm1.conversation_id
+
+        JOIN conversation_members AS cm2
+            ON c.id = cm2.conversation_id
+
+        WHERE cm1.user_id = ?
+        AND cm2.user_id = ?
+    """, (
+        session["user_id"],
+        other_user["id"]
+    )).fetchone()
+
+    if conversation is None:
+
+        conn.execute("""
+            INSERT INTO conversations DEFAULT VALUES
+        """)
+
+        conversation_id = conn.execute(
+            "SELECT last_insert_rowid()"
+        ).fetchone()[0]
+
+        conn.execute("""
+            INSERT INTO conversation_members
+            (conversation_id, user_id)
+            VALUES (?, ?)
+        """, (
+            conversation_id,
+            session["user_id"]
+        ))
+
+        conn.execute("""
+            INSERT INTO conversation_members
+            (conversation_id, user_id)
+            VALUES (?, ?)
+        """, (
+            conversation_id,
+            other_user["id"]
+        ))
+
+        conn.commit()
+
+    else:
+
+        conversation_id = conversation["id"]
+
+    chat_messages = conn.execute("""
+        SELECT
+            m.id,
+            m.content,
+            m.created_at,
+            m.sender_id,
+            u.username AS sender
+
+        FROM messages AS m
+
+        JOIN users AS u
+            ON m.sender_id = u.id
+
+        WHERE m.conversation_id = ?
+
+        ORDER BY m.id ASC
+    """, (
+        conversation_id,
+    )).fetchall()
+
+    conn.close()
+
+    return render_template(
+        "chat.html",
+        other_user=other_user,
+        messages=chat_messages,
+        conversation_id=conversation_id
+    )
+
 #Running app part
 if __name__ == '__main__':
     init_db()

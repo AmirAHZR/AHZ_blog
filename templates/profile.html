@@ -17,6 +17,12 @@
     <button type="submit">Follow</button>
     </form>
     {% endif %}
+
+    <a href="{{ url_for('chat', username=user['username']) }}">
+        Message
+    </a>
+
+    
     {% endif %}
     <details>
     <summary>Following: {{ following_count }}</summary>
