@@ -10,11 +10,15 @@
     {{ other_user["username"] }}
 </h1>
 
-<div id="chat-box">
+
+<div
+    id="chat-box"
+    data-conversation-id="{{ conversation_id }}"
+>
 
     {% for message in messages %}
 
-        <div>
+        <div class="message">
 
             <strong>
                 {{ message["sender"] }}
@@ -34,17 +38,12 @@
 
 </div>
 
-<form method="POST">
 
-    <input
-        type="hidden"
-        name="csrf_token"
-        value="{{ csrf_token() }}"
-    >
+<form id="message-form">
 
     <input
         type="text"
-        name="content"
+        id="message-input"
         placeholder="Write a message..."
         autocomplete="off"
         required
@@ -55,5 +54,14 @@
     </button>
 
 </form>
+
+
+<script
+    src="https://cdn.socket.io/4.7.5/socket.io.min.js"
+></script>
+
+<script
+    src="{{ url_for('static', filename='chat.js') }}"
+></script>
 
 {% endblock %}

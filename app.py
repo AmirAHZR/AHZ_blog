@@ -1,6 +1,7 @@
 from database import get_db
 from sqlite3 import IntegrityError
 from flask import Flask, render_template, request, redirect, url_for, session, flash
+from flask_socketio import SocketIO, emit, join_room
 from werkzeug.security import generate_password_hash, check_password_hash
 from database import init_db
 from os import environ
@@ -9,6 +10,7 @@ from flask_wtf.csrf import CSRFProtect, CSRFError
 
 
 app = Flask(__name__)
+socketio = SocketIO(app)
 app.secret_key = environ.get(
     "SECRET_KEY",
     "dev-secret-key"
@@ -913,7 +915,186 @@ def chat(username):
         conversation_id=conversation_id
     )
 
+@socketio.on("join_chat")
+def handle_join_chat(data):
+
+    if "user_id" not in session:
+        return
+
+    conversation_id = data.get("conversation_id")
+
+    if not conversation_id:
+        return
+
+    conn = get_db()
+
+    member = conn.execute("""
+        SELECT 1
+        FROM conversation_members
+        WHERE conversation_id = ?
+        AND user_id = ?
+    """, (
+        conversation_id,
+        session["user_id"]
+    )).fetchone()
+
+    conn.close()
+
+    if member is None:
+        return
+
+    join_room(f"conversation_{conversation_id}")
+
+@socketio.on("send_message")
+def handle_send_message(data):
+
+    if "user_id" not in session:
+        return
+
+    conversation_id = data.get("conversation_id")
+    content = data.get("content", "").strip()
+
+    if not conversation_id or not content:
+        return
+
+    conn = get_db()
+
+    member = conn.execute("""
+        SELECT 1
+        FROM conversation_members
+        WHERE conversation_id = ?
+        AND user_id = ?
+    """, (
+        conversation_id,
+        session["user_id"]
+    )).fetchone()
+
+    if member is None:
+        conn.close()
+        return
+
+    conn.execute("""
+        INSERT INTO messages
+        (
+            conversation_id,
+            sender_id,
+            content
+        )
+        VALUES (?, ?, ?)
+    """, (
+        conversation_id,
+        session["user_id"],
+        content
+    ))
+
+    conn.commit()
+
+    message = conn.execute("""
+        SELECT
+            messages.id,
+            messages.content,
+            messages.created_at,
+            messages.sender_id,
+            users.username AS sender
+
+        FROM messages
+
+        JOIN users
+            ON messages.sender_id = users.id
+
+        WHERE messages.id = last_insert_rowid()
+    """).fetchone()
+
+    conn.close()
+
+    emit(
+        "new_message",
+        {
+            "id": message["id"],
+            "content": message["content"],
+            "created_at": message["created_at"],
+            "sender_id": message["sender_id"],
+            "sender": message["sender"]
+        },
+        to=f"conversation_{conversation_id}"
+    )
+
+
+
+@app.route("/messages/<username>/send", methods=["POST"])
+def send_message(username):
+
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+
+    content = request.form.get("content", "").strip()
+
+    if not content:
+        return redirect(url_for("chat", username=username))
+
+    conn = get_db()
+
+    other_user = conn.execute("""
+        SELECT id, username
+        FROM users
+        WHERE username = ?
+    """, (username,)).fetchone()
+
+    if other_user is None:
+        conn.close()
+        return render_template("404_profile.html"), 404
+
+    if other_user["id"] == session["user_id"]:
+        conn.close()
+        return redirect(
+            url_for("profile", username=username)
+        )
+
+    conversation = conn.execute("""
+        SELECT c.id
+        FROM conversations AS c
+
+        JOIN conversation_members AS cm1
+            ON c.id = cm1.conversation_id
+
+        JOIN conversation_members AS cm2
+            ON c.id = cm2.conversation_id
+
+        WHERE cm1.user_id = ?
+        AND cm2.user_id = ?
+    """, (
+        session["user_id"],
+        other_user["id"]
+    )).fetchone()
+
+    if conversation is None:
+        conn.close()
+        return redirect(
+            url_for("chat", username=username)
+        )
+
+    conn.execute("""
+        INSERT INTO messages
+        (
+            conversation_id,
+            sender_id,
+            content
+        )
+        VALUES (?, ?, ?)
+    """, (
+        conversation["id"],
+        session["user_id"],
+        content
+    ))
+
+    conn.commit()
+    conn.close()
+
+    return redirect(
+        url_for("chat", username=username)
+    )
+
 #Running app part
 if __name__ == '__main__':
     init_db()
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    socketio.run(app, host='0.0.0.0', port=5000, debug=True)
