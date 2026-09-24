@@ -4,6 +4,7 @@
     {{ other_user["username"] }}
 {% endblock %}
 
+
 {% block content %}
 
 <h1>
@@ -13,44 +14,56 @@
 
 <div
     id="chat-box"
+
     data-conversation-id="{{ conversation_id }}"
+
+    data-user-id="{{ session['user_id'] }}"
 >
+
 
     {% for message in messages %}
 
         <div
-    class="message"
-    data-message-id="{{ message['id'] }}"
-    data-sender-id="{{ message['sender_id'] }}"
->
+            class="message"
 
-    <strong>
-        {{ message["sender"] }}
-    </strong>
+            data-message-id="{{ message['id'] }}"
 
-    <p>
-        {{ message["content"] }}
-    </p>
+            data-sender-id="{{ message['sender_id'] }}"
+        >
 
-    <small>
-        {{ message["created_at"] }}
-    </small>
+            <strong>
+                {{ message["sender"] }}
+            </strong>
 
-    {% if message["sender_id"] == session["user_id"] %}
 
-        <span class="message-status">
-            {% if message["is_read"] %}
-                ✓✓
-            {% else %}
-                ✓
+            <p>
+                {{ message["content"] }}
+            </p>
+
+
+            <small>
+                {{ message["created_at"] }}
+            </small>
+
+
+            {% if message["sender_id"] == session["user_id"] %}
+
+                <span class="message-status">
+
+                    {% if message["is_read"] %}
+                        ✓✓
+                    {% else %}
+                        ✓
+                    {% endif %}
+
+                </span>
+
             {% endif %}
-        </span>
 
-    {% endif %}
-
-</div>
+        </div>
 
     {% endfor %}
+
 
 </div>
 
@@ -59,11 +72,16 @@
 
     <input
         type="text"
+
         id="message-input"
+
         placeholder="Write a message..."
+
         autocomplete="off"
+
         required
     >
+
 
     <button type="submit">
         Send
@@ -76,8 +94,10 @@
     src="https://cdn.socket.io/4.7.5/socket.io.min.js"
 ></script>
 
+
 <script
     src="{{ url_for('static', filename='chat.js') }}"
 ></script>
+
 
 {% endblock %}

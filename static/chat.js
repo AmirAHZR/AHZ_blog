@@ -8,19 +8,28 @@ const conversationId = chatBox.dataset.conversationId;
 const currentUserId = chatBox.dataset.userId;
 
 
+// ========================================
 // Join conversation
+// ========================================
+
 socket.emit("join_chat", {
     conversation_id: conversationId
 });
 
 
-// Mark messages as read
+// ========================================
+// Mark existing messages as read
+// ========================================
+
 socket.emit("mark_messages_read", {
     conversation_id: conversationId
 });
 
 
+// ========================================
 // Send message
+// ========================================
+
 messageForm.addEventListener("submit", function(event) {
 
     event.preventDefault();
@@ -42,7 +51,10 @@ messageForm.addEventListener("submit", function(event) {
 });
 
 
-// New message
+// ========================================
+// Receive new message
+// ========================================
+
 socket.on("new_message", function(message) {
 
     const messageElement = document.createElement("div");
@@ -53,15 +65,24 @@ socket.on("new_message", function(message) {
     messageElement.dataset.senderId = message.sender_id;
 
 
+    // Sender
+
     const sender = document.createElement("strong");
+
     sender.textContent = message.sender;
 
 
+    // Content
+
     const content = document.createElement("p");
+
     content.textContent = message.content;
 
 
+    // Time
+
     const createdAt = document.createElement("small");
+
     createdAt.textContent = message.created_at;
 
 
@@ -70,7 +91,13 @@ socket.on("new_message", function(message) {
     messageElement.appendChild(createdAt);
 
 
-    if (String(message.sender_id) === String(currentUserId)) {
+    // اگر پیام مال خودمان است
+    // یک تیک نمایش بده
+
+    if (
+        String(message.sender_id) ===
+        String(currentUserId)
+    ) {
 
         const status = document.createElement("span");
 
@@ -87,9 +114,13 @@ socket.on("new_message", function(message) {
     chatBox.scrollTop = chatBox.scrollHeight;
 
 
-    // If the message belongs to the other user,
-    // mark it as read immediately.
-    if (String(message.sender_id) !== String(currentUserId)) {
+    // اگر پیام از طرف مقابل است،
+    // همان لحظه read شود
+
+    if (
+        String(message.sender_id) !==
+        String(currentUserId)
+    ) {
 
         socket.emit("mark_messages_read", {
             conversation_id: conversationId
@@ -100,27 +131,56 @@ socket.on("new_message", function(message) {
 });
 
 
-// Messages were read
+// ========================================
+// Someone read our messages
+// ========================================
+
 socket.on("messages_read", function(data) {
 
-    if (String(data.conversation_id) !== String(conversationId)) {
+    if (
+        String(data.conversation_id) !==
+        String(conversationId)
+    ) {
         return;
     }
 
 
-    const messages = chatBox.querySelectorAll(".message");
+    // اگر خودمان پیام‌ها را read کرده‌ایم،
+    // نباید پیام‌های خودمان دو تیک شوند.
+
+    if (
+        String(data.reader_id) ===
+        String(currentUserId)
+    ) {
+        return;
+    }
+
+
+    const messages =
+        chatBox.querySelectorAll(".message");
 
 
     messages.forEach(function(messageElement) {
 
-        const senderId = messageElement.dataset.senderId;
+        const senderId =
+            messageElement.dataset.senderId;
 
-        if (String(senderId) !== String(data.reader_id)) {
+
+        // فقط پیام‌های خودمان را ✓✓ کن.
+
+        if (
+            String(senderId) !==
+            String(currentUserId)
+        ) {
             return;
         }
 
 
-        const status = messageElement.querySelector(".message-status");
+        const status =
+            messageElement.querySelector(
+                ".message-status"
+            );
+
 
         if (status) {
             status.textContent = "✓✓";

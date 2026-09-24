@@ -770,7 +770,15 @@ def messages():
             c.id AS conversation_id,
             u.username,
             m.content AS last_message,
-            m.created_at
+            m.created_at,
+
+            (
+                SELECT COUNT(*)
+                FROM messages AS unread
+                WHERE unread.conversation_id = c.id
+                AND unread.sender_id != ?
+                AND unread.is_read = 0
+            ) AS unread_count
 
         FROM conversations AS c
 
@@ -795,6 +803,7 @@ def messages():
 
         ORDER BY m.id DESC
     """, (
+        session["user_id"],
         session["user_id"],
         session["user_id"]
     )).fetchall()
@@ -836,7 +845,6 @@ def chat(username):
 
     conversation = conn.execute("""
         SELECT c.id
-
         FROM conversations AS c
 
         JOIN conversation_members AS cm1
@@ -886,11 +894,18 @@ def chat(username):
 
         conversation_id = conversation["id"]
 
+
+    # وقتی کاربر وارد چت می‌شود،
+    # پیام‌های طرف مقابل خوانده می‌شوند.
+
     conn.execute("""
         UPDATE messages
         SET is_read = 1
+
         WHERE conversation_id = ?
+
         AND sender_id != ?
+
         AND is_read = 0
     """, (
         conversation_id,
@@ -898,12 +913,15 @@ def chat(username):
     ))
 
     conn.commit()
+
+
     chat_messages = conn.execute("""
         SELECT
             m.id,
             m.content,
             m.created_at,
             m.sender_id,
+            m.is_read,
             u.username AS sender
 
         FROM messages AS m
@@ -918,6 +936,7 @@ def chat(username):
         conversation_id,
     )).fetchall()
 
+
     conn.close()
 
     return render_template(
@@ -926,6 +945,7 @@ def chat(username):
         messages=chat_messages,
         conversation_id=conversation_id
     )
+
 
 @socketio.on("join_chat")
 def handle_join_chat(data):
@@ -938,12 +958,15 @@ def handle_join_chat(data):
     if not conversation_id:
         return
 
+
     conn = get_db()
 
     member = conn.execute("""
         SELECT 1
         FROM conversation_members
+
         WHERE conversation_id = ?
+
         AND user_id = ?
     """, (
         conversation_id,
@@ -952,10 +975,15 @@ def handle_join_chat(data):
 
     conn.close()
 
+
     if member is None:
         return
 
-    join_room(f"conversation_{conversation_id}")
+
+    join_room(
+        f"conversation_{conversation_id}"
+    )
+
 
 @socketio.on("send_message")
 def handle_send_message(data):
@@ -963,27 +991,41 @@ def handle_send_message(data):
     if "user_id" not in session:
         return
 
-    conversation_id = data.get("conversation_id")
-    content = data.get("content", "").strip()
+
+    conversation_id = data.get(
+        "conversation_id"
+    )
+
+    content = data.get(
+        "content",
+        ""
+    ).strip()
+
 
     if not conversation_id or not content:
         return
 
+
     conn = get_db()
+
 
     member = conn.execute("""
         SELECT 1
         FROM conversation_members
+
         WHERE conversation_id = ?
+
         AND user_id = ?
     """, (
         conversation_id,
         session["user_id"]
     )).fetchone()
 
+
     if member is None:
         conn.close()
         return
+
 
     conn.execute("""
         INSERT INTO messages
@@ -992,6 +1034,7 @@ def handle_send_message(data):
             sender_id,
             content
         )
+
         VALUES (?, ?, ?)
     """, (
         conversation_id,
@@ -999,7 +1042,9 @@ def handle_send_message(data):
         content
     ))
 
+
     conn.commit()
+
 
     message = conn.execute("""
         SELECT
@@ -1018,7 +1063,9 @@ def handle_send_message(data):
         WHERE messages.id = last_insert_rowid()
     """).fetchone()
 
+
     conn.close()
+
 
     emit(
         "new_message",
@@ -1030,83 +1077,10 @@ def handle_send_message(data):
             "sender": message["sender"],
             "is_read": message["is_read"]
         },
+
         to=f"conversation_{conversation_id}"
     )
 
-
-
-@app.route("/messages/<username>/send", methods=["POST"])
-def send_message(username):
-
-    if "user_id" not in session:
-        return redirect(url_for("login"))
-
-    content = request.form.get("content", "").strip()
-
-    if not content:
-        return redirect(url_for("chat", username=username))
-
-    conn = get_db()
-
-    other_user = conn.execute("""
-        SELECT id, username
-        FROM users
-        WHERE username = ?
-    """, (username,)).fetchone()
-
-    if other_user is None:
-        conn.close()
-        return render_template("404_profile.html"), 404
-
-    if other_user["id"] == session["user_id"]:
-        conn.close()
-        return redirect(
-            url_for("profile", username=username)
-        )
-
-    conversation = conn.execute("""
-        SELECT c.id
-        FROM conversations AS c
-
-        JOIN conversation_members AS cm1
-            ON c.id = cm1.conversation_id
-
-        JOIN conversation_members AS cm2
-            ON c.id = cm2.conversation_id
-
-        WHERE cm1.user_id = ?
-        AND cm2.user_id = ?
-    """, (
-        session["user_id"],
-        other_user["id"]
-    )).fetchone()
-
-    if conversation is None:
-        conn.close()
-        return redirect(
-            url_for("chat", username=username)
-        )
-
-    conn.execute("""
-        INSERT INTO messages
-        (
-            conversation_id,
-            sender_id,
-            content
-        )
-        VALUES (?, ?, ?)
-    """, (
-        conversation["id"],
-        session["user_id"],
-        content
-    ))
-
-    conn.commit()
-    conn.close()
-
-    return redirect(
-        url_for("chat", username=username)
-    )
 
 @socketio.on("mark_messages_read")
 def handle_mark_messages_read(data):
@@ -1114,41 +1088,63 @@ def handle_mark_messages_read(data):
     if "user_id" not in session:
         return
 
-    conversation_id = data.get("conversation_id")
+
+    conversation_id = data.get(
+        "conversation_id"
+    )
+
 
     if not conversation_id:
         return
 
+
     conn = get_db()
+
+
+    # بررسی عضویت کاربر در conversation
 
     member = conn.execute("""
         SELECT 1
         FROM conversation_members
+
         WHERE conversation_id = ?
+
         AND user_id = ?
     """, (
         conversation_id,
         session["user_id"]
     )).fetchone()
 
+
     if member is None:
         conn.close()
         return
 
+
+    # خوانده شدن پیام‌های طرف مقابل
+
     conn.execute("""
         UPDATE messages
+
         SET is_read = 1
+
         WHERE conversation_id = ?
+
         AND sender_id != ?
+
         AND is_read = 0
     """, (
         conversation_id,
         session["user_id"]
     ))
 
+
     conn.commit()
 
     conn.close()
+
+
+    # اطلاع به کاربر مقابل
 
     emit(
         "messages_read",
@@ -1156,10 +1152,20 @@ def handle_mark_messages_read(data):
             "conversation_id": conversation_id,
             "reader_id": session["user_id"]
         },
+
         to=f"conversation_{conversation_id}"
     )
 
-#Running app part
-if __name__ == '__main__':
+
+# Running app
+
+if __name__ == "__main__":
+
     init_db()
-    socketio.run(app, host='0.0.0.0', port=5000, debug=True)
+
+    socketio.run(
+        app,
+        host="0.0.0.0",
+        port=5000,
+        debug=True
+    )
