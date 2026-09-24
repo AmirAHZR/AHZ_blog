@@ -18,21 +18,37 @@
 
     {% for message in messages %}
 
-        <div class="message">
+        <div
+    class="message"
+    data-message-id="{{ message['id'] }}"
+    data-sender-id="{{ message['sender_id'] }}"
+>
 
-            <strong>
-                {{ message["sender"] }}
-            </strong>
+    <strong>
+        {{ message["sender"] }}
+    </strong>
 
-            <p>
-                {{ message["content"] }}
-            </p>
+    <p>
+        {{ message["content"] }}
+    </p>
 
-            <small>
-                {{ message["created_at"] }}
-            </small>
+    <small>
+        {{ message["created_at"] }}
+    </small>
 
-        </div>
+    {% if message["sender_id"] == session["user_id"] %}
+
+        <span class="message-status">
+            {% if message["is_read"] %}
+                ✓✓
+            {% else %}
+                ✓
+            {% endif %}
+        </span>
+
+    {% endif %}
+
+</div>
 
     {% endfor %}
 

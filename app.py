@@ -886,6 +886,18 @@ def chat(username):
 
         conversation_id = conversation["id"]
 
+    conn.execute("""
+        UPDATE messages
+        SET is_read = 1
+        WHERE conversation_id = ?
+        AND sender_id != ?
+        AND is_read = 0
+    """, (
+        conversation_id,
+        session["user_id"]
+    ))
+
+    conn.commit()
     chat_messages = conn.execute("""
         SELECT
             m.id,
@@ -995,6 +1007,7 @@ def handle_send_message(data):
             messages.content,
             messages.created_at,
             messages.sender_id,
+            messages.is_read,
             users.username AS sender
 
         FROM messages
@@ -1014,7 +1027,8 @@ def handle_send_message(data):
             "content": message["content"],
             "created_at": message["created_at"],
             "sender_id": message["sender_id"],
-            "sender": message["sender"]
+            "sender": message["sender"],
+            "is_read": message["is_read"]
         },
         to=f"conversation_{conversation_id}"
     )
@@ -1092,6 +1106,57 @@ def send_message(username):
 
     return redirect(
         url_for("chat", username=username)
+    )
+
+@socketio.on("mark_messages_read")
+def handle_mark_messages_read(data):
+
+    if "user_id" not in session:
+        return
+
+    conversation_id = data.get("conversation_id")
+
+    if not conversation_id:
+        return
+
+    conn = get_db()
+
+    member = conn.execute("""
+        SELECT 1
+        FROM conversation_members
+        WHERE conversation_id = ?
+        AND user_id = ?
+    """, (
+        conversation_id,
+        session["user_id"]
+    )).fetchone()
+
+    if member is None:
+        conn.close()
+        return
+
+    conn.execute("""
+        UPDATE messages
+        SET is_read = 1
+        WHERE conversation_id = ?
+        AND sender_id != ?
+        AND is_read = 0
+    """, (
+        conversation_id,
+        session["user_id"]
+    ))
+
+    conn.commit()
+
+    conn.close()
+
+    emit(
+        "messages_read",
+        {
+            "conversation_id": conversation_id,
+            "reader_id": session["user_id"]
+        },
+        to=f"conversation_{conversation_id}"
     )
 
 #Running app part
